@@ -20,6 +20,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
 
+  turn:
+    image: instrumentisto/coturn:4.5
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "49152-49192:49152-49192"
+      - "49152-49192:49152-49192/udp"
+
   front:
     image: thecodingmachine/nodejs:14
     environment:
@@ -32,9 +42,9 @@ services:
       ADMIN_URL: "admin.${DOMAIN}"  # ADMIN_URL seems to be unused
       START_MAP_URL: "$START_MAP_URL"
       STARTUP_COMMAND_1: yarn install
-      TURN_SERVER: "turn:coturn.workadventu.re:443,turns:coturn.workadventu.re:443"
+      TURN_SERVER: "turn:turn.${DOMAIN}:3478"
       TURN_USER: workadventure
-      TURN_PASSWORD: WorkAdventure123
+      TURN_PASSWORD: supersicher
     command: yarn run start
     volumes:
       - ./workadventure/front:/usr/src/app
