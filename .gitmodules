@@ -2,3 +2,6 @@
 	path = workadventure
 	url = https://github.com/oxzi/workadventure.git
 	branch = raveadventure
+[submodule "maps/workadventure-playground"]
+	path = maps/workadventure-playground
+	url = https://github.com/oxzi/workadventure-playground.git
