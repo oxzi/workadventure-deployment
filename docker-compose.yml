@@ -1,0 +1,99 @@
+version: "3"
+services:
+  reverse-proxy:
+    image: traefik:v2.3
+    command:
+      - "--providers.docker"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - front
+      - back
+      - maps
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
+
+  front:
+    image: thecodingmachine/nodejs:14
+    environment:
+      DEBUG_MODE: "$DEBUG_MODE"
+      JITSI_URL: $JITSI_URL
+      JITSI_PRIVATE_MODE: "$JITSI_PRIVATE_MODE"
+      HOST: "0.0.0.0"
+      NODE_ENV: development
+      API_URL: "api.${DOMAIN}"
+      ADMIN_URL: "admin.${DOMAIN}"  # ADMIN_URL seems to be unused
+      START_MAP_URL: "$START_MAP_URL"
+      STARTUP_COMMAND_1: yarn install
+      TURN_SERVER: "turn:coturn.workadventu.re:443,turns:coturn.workadventu.re:443"
+      TURN_USER: workadventure
+      TURN_PASSWORD: WorkAdventure123
+    command: yarn run start
+    volumes:
+      - ./workadventure/front:/usr/src/app
+    labels:
+      - "traefik.http.services.front.loadbalancer.server.port=8080"
+      - "traefik.http.routers.front.rule=Host(`play.${DOMAIN}`)"
+      - "traefik.http.routers.front.entryPoints=web"
+      - "traefik.http.routers.front-ssl.rule=Host(`play.${DOMAIN}`)"
+      - "traefik.http.routers.front-ssl.entryPoints=websecure"
+      - "traefik.http.routers.front-ssl.tls=true"
+      - "traefik.http.routers.front-ssl.tls.certresolver=myresolver"
+      - "traefik.http.routers.front-ssl.service=front"
+
+  back:
+    image: thecodingmachine/nodejs:12
+    command: yarn dev
+    environment:
+      STARTUP_COMMAND_1: yarn install
+      SECRET_KEY: yourSecretKey
+      SECRET_JITSI_KEY: "$SECRET_JITSI_KEY"
+      ALLOW_ARTILLERY: "true"
+      ADMIN_API_TOKEN: "$ADMIN_API_TOKEN"
+      JITSI_URL: $JITSI_URL
+      JITSI_ISS: $JITSI_ISS
+    volumes:
+      - ./workadventure/back:/usr/src/app
+    labels:
+      - "traefik.http.services.back.loadbalancer.server.port=8080"
+      - "traefik.http.routers.back.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.back.entryPoints=web"
+      - "traefik.http.routers.back-ssl.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.back-ssl.entryPoints=websecure"
+      - "traefik.http.routers.back-ssl.tls=true"
+      - "traefik.http.routers.back-ssl.tls.certresolver=myresolver"
+      - "traefik.http.routers.back-ssl.service=back"
+
+  messages:
+    image: thecodingmachine/workadventure-back-base:latest
+    environment:
+      STARTUP_COMMAND_1: yarn install
+      STARTUP_COMMAND_2: yarn run proto:watch
+    volumes:
+      - ./workadventure/messages:/usr/src/app
+      - ./workadventure/back:/usr/src/back
+      - ./workadventure/front:/usr/src/front
+
+  maps:
+    image: nginx:alpine
+    volumes:
+      - ./maps:/usr/share/nginx/html
+    labels:
+      - "traefik.http.middlewares.maps-cors.headers.accessControlAllowOriginList=*"
+      - "traefik.http.services.maps.loadbalancer.server.port=80"
+      - "traefik.http.routers.maps.rule=Host(`maps.${DOMAIN}`)"
+      - "traefik.http.routers.maps.entryPoints=web"
+      - "traefik.http.routers.maps.middlewares=maps-cors"
+      - "traefik.http.routers.maps-ssl.rule=Host(`maps.${DOMAIN}`)"
+      - "traefik.http.routers.maps-ssl.entryPoints=websecure"
+      - "traefik.http.routers.maps-ssl.tls=true"
+      - "traefik.http.routers.maps-ssl.tls.certresolver=myresolver"
+      - "traefik.http.routers.maps-ssl.service=maps"
+      - "traefik.http.routers.maps-ssl.middlewares=maps-cors"
