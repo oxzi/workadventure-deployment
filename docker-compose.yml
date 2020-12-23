@@ -20,6 +20,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
 
+
   turn:
     image: instrumentisto/coturn:4.5
     volumes:
@@ -29,6 +30,7 @@ services:
       - "3478:3478/udp"
       - "49152-49192:49152-49192"
       - "49152-49192:49152-49192/udp"
+
 
   front:
     image: thecodingmachine/nodejs:14
@@ -49,14 +51,24 @@ services:
     volumes:
       - ./workadventure/front:/usr/src/app
     labels:
-      - "traefik.http.services.front.loadbalancer.server.port=8080"
+      # Forward HTTP to HTTPS
+      - "traefik.http.middlewares.front-https.redirectscheme.scheme=https"
+
       - "traefik.http.routers.front.rule=Host(`play.${DOMAIN}`)"
       - "traefik.http.routers.front.entryPoints=web"
+      - "traefik.http.routers.front.middlewares=front-https"
+
+      # Serve frontend via HTTPS, gzip compressed
+      - "traefik.http.middlewares.front-compress.compress=true"
+
+      - "traefik.http.services.front-ssl.loadbalancer.server.port=8080"
+
       - "traefik.http.routers.front-ssl.rule=Host(`play.${DOMAIN}`)"
       - "traefik.http.routers.front-ssl.entryPoints=websecure"
       - "traefik.http.routers.front-ssl.tls=true"
       - "traefik.http.routers.front-ssl.tls.certresolver=myresolver"
-      - "traefik.http.routers.front-ssl.service=front"
+      - "traefik.http.routers.front-ssl.middlewares=front-compress"
+
 
   back:
     image: thecodingmachine/nodejs:12
@@ -72,14 +84,21 @@ services:
     volumes:
       - ./workadventure/back:/usr/src/app
     labels:
-      - "traefik.http.services.back.loadbalancer.server.port=8080"
+      # Forward HTTP to HTTPS
+      - "traefik.http.middlewares.back-https.redirectscheme.scheme=https"
+
       - "traefik.http.routers.back.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.back.entryPoints=web"
+      - "traefik.http.routers.back.middlewares=back-https"
+
+      # Serve backend via HTTPS
+      - "traefik.http.services.back-ssl.loadbalancer.server.port=8080"
+
       - "traefik.http.routers.back-ssl.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.back-ssl.entryPoints=websecure"
       - "traefik.http.routers.back-ssl.tls=true"
       - "traefik.http.routers.back-ssl.tls.certresolver=myresolver"
-      - "traefik.http.routers.back-ssl.service=back"
+
 
   messages:
     image: thecodingmachine/workadventure-back-base:latest
@@ -90,20 +109,30 @@ services:
       - ./workadventure/messages:/usr/src/app
       - ./workadventure/back:/usr/src/back
       - ./workadventure/front:/usr/src/front
+    labels:
+      - "traefik.enable=false"
+
 
   maps:
     image: nginx:alpine
     volumes:
       - ./maps:/usr/share/nginx/html
     labels:
-      - "traefik.http.middlewares.maps-cors.headers.accessControlAllowOriginList=*"
-      - "traefik.http.services.maps.loadbalancer.server.port=80"
+      # Forward HTTP to HTTPS
+      - "traefik.http.middlewares.maps-https.redirectscheme.scheme=https"
+
       - "traefik.http.routers.maps.rule=Host(`maps.${DOMAIN}`)"
       - "traefik.http.routers.maps.entryPoints=web"
-      - "traefik.http.routers.maps.middlewares=maps-cors"
+      - "traefik.http.routers.maps.middlewares=maps-https"
+
+      # Serve maps via HTTPS, add CORS headers and gzip compression
+      - "traefik.http.middlewares.maps-cors.headers.accessControlAllowOriginList=*"
+      - "traefik.http.middlewares.maps-compress.compress=true"
+
+      - "traefik.http.services.maps-ssl.loadbalancer.server.port=80"
+
       - "traefik.http.routers.maps-ssl.rule=Host(`maps.${DOMAIN}`)"
       - "traefik.http.routers.maps-ssl.entryPoints=websecure"
       - "traefik.http.routers.maps-ssl.tls=true"
       - "traefik.http.routers.maps-ssl.tls.certresolver=myresolver"
-      - "traefik.http.routers.maps-ssl.service=maps"
-      - "traefik.http.routers.maps-ssl.middlewares=maps-cors"
+      - "traefik.http.routers.maps-ssl.middlewares=maps-cors,maps-compress"
