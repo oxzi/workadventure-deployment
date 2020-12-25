@@ -136,3 +136,26 @@ services:
       - "traefik.http.routers.maps-ssl.tls=true"
       - "traefik.http.routers.maps-ssl.tls.certresolver=myresolver"
       - "traefik.http.routers.maps-ssl.middlewares=maps-cors,maps-compress"
+
+  landing-page:
+    image: nginx:alpine
+    volumes:
+      - ./landing-page:/usr/share/nginx/html
+    labels:
+      # Forward HTTP to HTTPS
+      - "traefik.http.middlewares.landing-page-https.redirectscheme.scheme=https"
+
+      - "traefik.http.routers.landing-page.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.landing-page.entryPoints=web"
+      - "traefik.http.routers.landing-page.middlewares=landing-page-https"
+
+      # Serve landing page via HTTPS, gzip compressed
+      - "traefik.http.middlewares.landing-page-compress.compress=true"
+
+      - "traefik.http.services.landing-page-ssl.loadbalancer.server.port=80"
+
+      - "traefik.http.routers.landing-page-ssl.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.landing-page-ssl.entryPoints=websecure"
+      - "traefik.http.routers.landing-page-ssl.tls=true"
+      - "traefik.http.routers.landing-page-ssl.tls.certresolver=myresolver"
+      - "traefik.http.routers.landing-page-ssl.middlewares=landing-page-compress"
