@@ -145,7 +145,7 @@ services:
       # Forward HTTP to HTTPS
       - "traefik.http.middlewares.landing-page-https.redirectscheme.scheme=https"
 
-      - "traefik.http.routers.landing-page.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.landing-page.rule=Host(`${DOMAIN}`, `${LANDING_DOMAIN}`)"
       - "traefik.http.routers.landing-page.entryPoints=web"
       - "traefik.http.routers.landing-page.middlewares=landing-page-https"
 
@@ -154,7 +154,7 @@ services:
 
       - "traefik.http.services.landing-page-ssl.loadbalancer.server.port=80"
 
-      - "traefik.http.routers.landing-page-ssl.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.landing-page-ssl.rule=Host(`${DOMAIN}`, `${LANDING_DOMAIN}`)"
       - "traefik.http.routers.landing-page-ssl.entryPoints=websecure"
       - "traefik.http.routers.landing-page-ssl.tls=true"
       - "traefik.http.routers.landing-page-ssl.tls.certresolver=myresolver"
