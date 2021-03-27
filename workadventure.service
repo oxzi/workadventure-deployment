@@ -1,0 +1,13 @@
+[Unit]
+Description=WorkAdventure environment
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+WorkingDirectory=/var/lib/workadventure
+ExecStart=/usr/bin/docker-compose up -d --remove-orphans --build
+ExecStop=/usr/bin/docker-compose down
+
+[Install]
+WantedBy=multi-user.target
