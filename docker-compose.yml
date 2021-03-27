@@ -19,6 +19,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
+    logging:
+      driver: "journald"
 
 
   turn:
@@ -29,6 +31,10 @@ services:
       - "3478:3478"
       - "3478:3478/udp"
       - "49052-49152:49052-49152/udp"
+    logging:
+      driver: "journald"
+    labels:
+      - "traefik.enable=false"
 
 
   front:
@@ -49,6 +55,8 @@ services:
     command: yarn run start
     volumes:
       - ./workadventure/front:/usr/src/app
+    logging:
+      driver: "journald"
     labels:
       # Forward HTTP to HTTPS
       - "traefik.http.middlewares.front-https.redirectscheme.scheme=https"
@@ -82,6 +90,8 @@ services:
       JITSI_ISS: $JITSI_ISS
     volumes:
       - ./workadventure/back:/usr/src/app
+    logging:
+      driver: "journald"
     labels:
       # Forward HTTP to HTTPS
       - "traefik.http.middlewares.back-https.redirectscheme.scheme=https"
@@ -108,6 +118,8 @@ services:
       - ./workadventure/messages:/usr/src/app
       - ./workadventure/back:/usr/src/back
       - ./workadventure/front:/usr/src/front
+    logging:
+      driver: "journald"
     labels:
       - "traefik.enable=false"
 
@@ -116,6 +128,8 @@ services:
     image: nginx:alpine
     volumes:
       - ./maps:/usr/share/nginx/html
+    logging:
+      driver: "journald"
     labels:
       # Forward HTTP to HTTPS
       - "traefik.http.middlewares.maps-https.redirectscheme.scheme=https"
@@ -140,6 +154,8 @@ services:
     image: nginx:alpine
     volumes:
       - ./landing-page:/usr/share/nginx/html
+    logging:
+      driver: "journald"
     labels:
       # Forward HTTP to HTTPS
       - "traefik.http.middlewares.landing-page-https.redirectscheme.scheme=https"
