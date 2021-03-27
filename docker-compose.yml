@@ -27,10 +27,7 @@ services:
     image: instrumentisto/coturn:4.5
     volumes:
       - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf
-    ports:
-      - "3478:3478"
-      - "3478:3478/udp"
-      - "49052-49152:49052-49152/udp"
+    network_mode: "host"
     logging:
       driver: "journald"
     labels:
